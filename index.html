@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Велотреня PRO HUB</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Lucide Icons -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        :root {
+            --tg-bg: var(--tg-theme-bg-color, #f8fafc);
+            --tg-text: var(--tg-theme-text-color, #0f172a);
+            --tg-hint: var(--tg-theme-hint-color, #94a3b8);
+            --tg-link: var(--tg-theme-link-color, #2563eb);
+            --tg-button: var(--tg-theme-button-color, #2563eb);
+            --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+        }
+        body {
+            background-color: var(--tg-bg);
+            color: var(--tg-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        input[type="date"], input[type="time"] { color-scheme: light; }
+        .animate-bounce-slow { animation: bounce 2s infinite; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="babel">
+        const { useState, useEffect, useMemo } = React;
+        const { 
+            Sun, Wind, ArrowUp, Sparkles, Loader2, 
+            ShieldAlert, Zap, Mountain, Info, AlertCircle, FileCode, Upload, Activity, 
+            Route: RouteIcon, Clock, Calendar, ChevronRight, Trophy, Utensils
+        } = lucide;
+
+        const App = () => {
+            const tg = window.Telegram.WebApp;
+
+            // --- Параметры атлета ---
+            const ATHLETE_WEIGHT = 76;
+            const TOTAL_MASS = 85; // 76кг + 9кг вел
+            const AVG_POWER = 140;
+            const TARGET_SPEED = 30;
+
+            // --- Состояние ---
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const [startTime, setStartTime] = useState("10:00");
+            const [distance, setDistance] = useState(60); 
+            const [manualElevation, setManualElevation] = useState(0); 
+            const [weather, setForecast] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [gpxLoading, setGpxLoading] = useState(false);
+            const [fileName, setFileName] = useState("");
+
+            useEffect(() => {
+                tg.ready();
+                tg.expand();
+            }, []);
+
+            // Набор высоты: 5.8м на 1км, если нет файла
+            const currentElevation = useMemo(() => {
+                if (fileName && manualElevation > 0) return manualElevation;
+                return Math.round(distance * 5.8);
+            }, [distance, manualElevation, fileName]);
+
+            const durationMin = useMemo(() => (distance / TARGET_SPEED) * 60, [distance]);
+
+            const formatRideTime = (dist, speed) => {
+                if (!dist || dist === 0) return "0:00";
+                const totalHours = dist / speed;
+                const h = Math.floor(totalHours);
+                const m = Math.round((totalHours - h) * 60);
+                return `${h}:${m.toString().padStart(2, '0')}`;
+            };
+
+            const getTempStyle = (t) => {
+                if (t < 12) return "bg-blue-50 border-blue-100 text-blue-800";
+                if (t <= 22) return "bg-emerald-50 border-emerald-100 text-emerald-800";
+                if (t <= 28) return "bg-orange-50 border-orange-100 text-orange-800";
+                return "bg-red-50 border-red-100 text-red-800";
+            };
+
+            // Получение погоды (Open-Meteo без ключей)
+            const fetchWeather = async () => {
+                setLoading(true);
+                try {
+                    const url = `https://api.open-meteo.com/v1/forecast?latitude=55.55&longitude=37.47&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&start_date=${date}&end_date=${date}&timezone=Europe/Moscow`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    const startHour = parseInt(startTime.split(':')[0]);
+                    const sliced = [];
+                    for(let i = 0; i < 5; i++) {
+                        const idx = (startHour + i) % 24;
+                        sliced.push({
+                            time: `${idx.toString().padStart(2, '0')}:00`,
+                            temp: Math.round(data.hourly.temperature_2m[idx]),
+                            wind: Math.round(data.hourly.wind_speed_10m[idx] / 3.6),
+                            deg: data.hourly.wind_direction_10m[idx]
+                        });
+                    }
+                    setForecast(sliced);
+                } catch (e) { setForecast([]); } finally { setLoading(false); }
+            };
+
+            useEffect(() => { fetchWeather(); }, [date, startTime]);
+
+            const calculateHaversine = (lat1, lon1, lat2, lon2) => {
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            };
+
+            const handleGpxUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setGpxLoading(true);
+                setFileName(file.name);
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const xml = new DOMParser().parseFromString(event.target.result, "text/xml");
+                        const points = xml.getElementsByTagName("trkpt");
+                        let totalDist = 0; let totalGain = 0;
+                        for (let i = 0; i < points.length - 1; i++) {
+                            const lat1 = parseFloat(points[i].getAttribute("lat"));
+                            const lon1 = parseFloat(points[i].getAttribute("lon"));
+                            const lat2 = parseFloat(points[i+1].getAttribute("lat"));
+                            const lon2 = parseFloat(points[i+1].getAttribute("lon"));
+                            totalDist += calculateHaversine(lat1, lon1, lat2, lon2);
+                            const e1 = parseFloat(points[i].getElementsByTagName("ele")[0]?.textContent || 0);
+                            const e2 = parseFloat(points[i+1].getElementsByTagName("ele")[0]?.textContent || 0);
+                            if (e2 > e1) totalGain += (e2 - e1);
+                        }
+                        setDistance(parseFloat(totalDist.toFixed(1)));
+                        setManualElevation(Math.round(totalGain));
+                        tg.HapticFeedback.notificationOccurred('success');
+                    } catch (err) { alert("Ошибка разбора GPX"); }
+                    finally { setGpxLoading(false); }
+                };
+                reader.readAsText(file);
+            };
+
+            const totalKcal = useMemo(() => {
+                const durationH = distance / 30;
+                const mechanicalKcal = AVG_POWER * durationH * 3.6;
+                const potentialEnergyKcal = (TOTAL_MASS * 9.81 * currentElevation) / (4184 * 0.23);
+                return Math.round(mechanicalKcal + potentialEnergyKcal);
+            }, [distance, currentElevation]);
+
+            const portions = Math.max(0, distance > 0 ? (Math.floor((durationMin - 60) / 20) + 1) : 0);
+
+            // Локальная экспертная логика (вместо Gemini)
+            const coachInsights = useMemo(() => {
+                const startTemp = weather[0]?.temp || 15;
+                const startWind = weather[0]?.wind || 3;
+                
+                let advice = {
+                    pace: `Набор ${currentElevation}м требует контроля. Не превышай 180 Вт на подъемах.`,
+                    prep: startTemp < 12 ? "Старт в холоде! Первые 20 мин — плавный прогрев связок." : "Идеальный старт. Каденс 90+ для экономии гликогена.",
+                    fuel: `На 40' мин — банан. С 60' мин — мишки. ${distance >= 90 ? "Нужен 🥪 обед на 2.5 часе!" : "Изотоник — 150мл каждые 20 мин."}`,
+                    safety: startWind > 5 ? `Сильный ветер (${startWind} м/с)! Держи руль крепче на открытых участках.` : "Ветер умеренный. Следи за давлением (6-7 bar)."
+                };
+                return advice;
+            }, [weather, distance, currentElevation]);
+
+            return (
+                <div className="max-w-md mx-auto pb-10 min-h-screen">
+                    {/* Header */}
+                    <div className="p-4 bg-white border-b border-slate-200 space-y-4 sticky top-0 z-50">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-600 p-2 rounded-xl shadow-lg">
+                                    <Activity size={20} className="text-white" />
+                                </div>
+                                <h1 className="text-lg font-black uppercase italic tracking-tighter">Велотреня HUB</h1>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full uppercase tracking-widest">Public Release</span>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <label className="text-[7px] font-black text-slate-400 uppercase block mb-1">Старт</label>
+                                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="bg-transparent text-xs font-bold w-full outline-none" />
+                            </div>
+                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <label className="text-[7px] font-black text-slate-400 uppercase block mb-1">Дата</label>
+                                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-transparent text-[10px] font-bold w-full outline-none" />
+                            </div>
+                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <label className="text-[7px] font-black text-slate-400 uppercase block mb-1">Дистанция</label>
+                                <input type="number" value={distance} onChange={e => setDistance(parseFloat(e.target.value) || 0)} className="bg-transparent text-xs font-black text-blue-600 w-full outline-none" />
+                            </div>
+                        </div>
+
+                        <label className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white rounded-xl p-3 shadow-md active:scale-95 transition-all cursor-pointer">
+                            <input type="file" accept=".gpx" onChange={handleGpxUpload} className="hidden" />
+                            {gpxLoading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">{fileName ? "Трек активен" : "Загрузить GPX"}</span>
+                        </label>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="p-4 grid grid-cols-2 gap-3">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-orange-500">
+                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Расход</p>
+                            <p className="text-2xl font-black text-orange-600 leading-none">{totalKcal} <small className="text-[10px] font-bold">ккал</small></p>
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-emerald-500">
+                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Набор</p>
+                            <p className="text-2xl font-black text-slate-800 leading-none">+{currentElevation} <small className="text-[10px] font-bold">м</small></p>
+                        </div>
+                        <div className="col-span-2 bg-white p-4 rounded-2xl shadow-sm flex items-center justify-between border border-slate-100">
+                             <div>
+                                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Время (30 км/ч)</p>
+                                <p className="text-lg font-black text-blue-600">{formatRideTime(distance, 30)}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Питание 🧸</p>
+                                <p className="text-lg font-black text-slate-800">{portions} порций</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Weather Scroll */}
+                    <div className="px-4">
+                        <div className="flex gap-2 overflow-x-auto pb-4 custom-scrollbar">
+                            {weather.map((h, i) => (
+                                <div key={i} className={`min-w-[120px] p-4 rounded-2xl shadow-sm border flex flex-col items-center gap-2 ${getTempStyle(h.temp)}`}>
+                                    <span className="font-mono text-[9px] font-black opacity-50 uppercase">{h.time}</span>
+                                    <div className="text-xl font-black">{h.temp}°C</div>
+                                    <div className="flex items-center gap-1">
+                                        <ArrowUp size={14} className="text-blue-500" style={{ transform: `rotate(${h.deg}deg)` }} />
+                                        <span className="text-[10px] font-bold">{h.wind} м/с</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Coach Analysis */}
+                    <div className="p-4">
+                        <section className="bg-slate-900 text-white rounded-[2rem] p-6 shadow-xl space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-600 p-2 rounded-xl shadow-lg"><Trophy size={20} className="text-white" /></div>
+                                <h2 className="text-xs font-black uppercase tracking-widest">Установка тренера</h2>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div className="border-l-2 border-blue-500 pl-4">
+                                    <p className="text-[8px] font-black text-blue-400 uppercase mb-1">Темп</p>
+                                    <p className="text-[11px] leading-relaxed italic text-slate-300">{coachInsights.prep} {coachInsights.pace}</p>
+                                </div>
+                                <div className="border-l-2 border-emerald-500 pl-4">
+                                    <p className="text-[8px] font-black text-emerald-400 uppercase mb-1">Питание 🍌</p>
+                                    <p className="text-[11px] leading-relaxed italic text-slate-300">{coachInsights.fuel}</p>
+                                </div>
+                            </div>
+
+                            {/* Timeline */}
+                            <div className="pt-6 border-t border-white/10">
+                                <div className="flex justify-between relative px-2">
+                                    <div className="absolute top-2.5 left-0 w-full h-[2px] bg-slate-800" />
+                                    {[0, 40, 60, 100, 150, 180, 240].map(m => {
+                                        if (m > durationMin + 15) return null;
+                                        let icon = null;
+                                        if (m === 40) icon = "🍌";
+                                        if (m >= 60 && m % 40 === 0 && m !== 150) icon = "🧸";
+                                        if (m === 150 && distance >= 90) icon = "🥪";
+                                        return (
+                                            <div key={m} className="flex flex-col items-center relative z-10">
+                                                <div className={`w-2 h-2 rounded-full border border-slate-900 ${icon ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+                                                <span className="text-[7px] mt-1 text-slate-500 font-bold">{m}'</span>
+                                                {icon && <span className="absolute -top-7 text-sm animate-bounce-slow">{icon}</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <footer className="text-center py-10 opacity-30 border-t border-slate-200 mt-6 mx-4 italic">
+                        <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 leading-none">Sosenkoye Hub &bull; 2026</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
