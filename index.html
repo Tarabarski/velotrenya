@@ -1,1 +1,326 @@
 
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Велотреня PRO HUB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .input-group { background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: 0.75rem; display: flex; flex-direction: column; gap: 2px; }
+        .input-group label { font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .input-group input { background: transparent; border: none; font-size: 0.875rem; font-weight: 700; outline: none; width: 100%; color: #1e293b; }
+        
+        .custom-scroll::-webkit-scrollbar { height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        @keyframes bounce-slow { 0%, 100% { transform: translateY(-10%); } 50% { transform: none; } }
+        .animate-bounce-slow { animation: bounce-slow 2s infinite; }
+        
+        .weather-card { min-width: 120px; flex-shrink: 0; padding: 1rem; border-radius: 1rem; border: 1px solid rgba(0,0,0,0.05); text-align: center; }
+        
+        /* Цвета погоды */
+        .temp-cold { background: #eff6ff; color: #1e40af; border-color: #dbeafe; }
+        .temp-mild { background: #f0fdf4; color: #166534; border-color: #dcfce7; }
+        .temp-warm { background: #fff7ed; color: #9a3412; border-color: #ffedd5; }
+        .temp-hot { background: #fef2f2; color: #991b1b; border-color: #fee2e2; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- HEADER -->
+        <div class="card space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 p-2 rounded-xl shadow-lg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-black italic tracking-tighter uppercase leading-none">Велотреня HUB</h1>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Standalone Pro Analytics</p>
+                    </div>
+                </div>
+                <div class="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-100 uppercase">v4.0 Final</div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div class="input-group">
+                    <label>Дата заезда</label>
+                    <input type="date" id="input-date">
+                </div>
+                <div class="input-group">
+                    <label>Время старта</label>
+                    <input type="time" id="input-time" value="10:00">
+                </div>
+                <div class="input-group col-span-2 md:col-span-1">
+                    <label>Дистанция (км)</label>
+                    <input type="number" id="input-distance" value="60" step="1">
+                </div>
+            </div>
+
+            <label class="flex items-center justify-center gap-3 w-full bg-slate-900 text-white rounded-xl p-3 shadow-md active:scale-95 transition-all cursor-pointer">
+                <input type="file" id="input-gpx" accept=".gpx" class="hidden">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <span class="text-xs font-black uppercase tracking-widest" id="gpx-label">Загрузить GPX</span>
+            </label>
+        </div>
+
+        <!-- MAIN DASHBOARD -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="card flex flex-col items-center justify-center text-center py-4">
+                <span class="text-[9px] font-black text-slate-400 uppercase mb-1">Набор высоты</span>
+                <p class="text-xl font-black text-orange-600 leading-none" id="stat-elev">+348 м</p>
+            </div>
+            <div class="card flex flex-col items-center justify-center text-center py-4">
+                <span class="text-[9px] font-black text-slate-400 uppercase mb-1">Время (30 км/ч)</span>
+                <p class="text-xl font-black text-emerald-600 leading-none" id="stat-time">2:00</p>
+            </div>
+            <div class="card flex flex-col items-center justify-center text-center py-4">
+                <span class="text-[9px] font-black text-slate-400 uppercase mb-1">Энергия</span>
+                <p class="text-xl font-black text-blue-600 leading-none" id="stat-kcal">1840 ккал</p>
+            </div>
+            <div class="card flex flex-col items-center justify-center text-center py-4">
+                <span class="text-[9px] font-black text-slate-400 uppercase mb-1">Порции 🧸</span>
+                <p class="text-xl font-black text-slate-800 leading-none" id="stat-portions">4</p>
+            </div>
+        </div>
+
+        <!-- WEATHER -->
+        <div class="card space-y-4">
+            <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                Прогноз на заезд
+            </h2>
+            <div class="flex gap-3 overflow-x-auto pb-2 custom-scroll" id="weather-list">
+                <!-- Weather items here -->
+            </div>
+        </div>
+
+        <!-- COACH & GEAR -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Gear -->
+            <div class="card space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Экипировка (слои)
+                </h2>
+                <div class="grid grid-cols-1 gap-2 text-xs" id="gear-list">
+                    <!-- Gear items -->
+                </div>
+            </div>
+
+            <!-- Strategy -->
+            <div class="card bg-slate-900 text-white border-none space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17M14 14.66V17M18 9.22c0 3.97-3.07 7.06-7.01 7.06S4 13.19 4 9.22c0-2.41 1.99-4.36 4.45-4.36h7.09c2.47 0 4.46 1.95 4.46 4.36Z"/></svg>
+                    Установка тренера
+                </h2>
+                <div class="space-y-3 text-[11px] italic text-slate-300 leading-relaxed" id="coach-advice">
+                    <!-- Advice -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="card bg-slate-900 text-white border-none">
+            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-center text-slate-500 mb-10">График дозаправки (мин)</h3>
+            <div class="relative h-12 flex items-center px-4" id="timeline-container">
+                <div class="absolute top-1/2 left-0 w-full h-[2px] bg-slate-800 -translate-y-1/2"></div>
+                <div class="w-full flex justify-between relative z-10" id="timeline-points">
+                    <!-- Points -->
+                </div>
+            </div>
+            <div class="mt-8 grid grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase tracking-tighter opacity-50">
+                <div>🍌 Банан: 40'</div>
+                <div>🧸 Мишки: 20'</div>
+                <div>🥪 Обед: >90км</div>
+            </div>
+        </div>
+
+        <footer class="text-center py-6 opacity-30 italic text-[10px] font-black uppercase tracking-[0.5em]">
+            Sosenkoye Hub • 2026
+        </footer>
+    </div>
+
+    <script>
+        // --- ДАННЫЕ И ЛОГИКА ---
+        const state = {
+            date: new Date().toISOString().split('T')[0],
+            time: "10:00",
+            distance: 60,
+            elevation: 348,
+            weather: [],
+            isGpx: false
+        };
+
+        const updateStats = () => {
+            if (!state.isGpx) {
+                state.elevation = Math.round(state.distance * 5.8);
+            }
+            
+            const durationH = state.distance / 30;
+            const kcal = Math.round((140 * durationH * 3.6) + (85 * 9.81 * state.elevation / (4184 * 0.23)));
+            const durationMin = Math.round(durationH * 60);
+            const portions = durationMin >= 60 ? Math.floor((durationMin - 60) / 20) + 1 : 0;
+
+            document.getElementById('stat-elev').textContent = `+${state.elevation} м`;
+            document.getElementById('stat-time').textContent = `${Math.floor(durationH)}:${Math.round((durationH % 1) * 60).toString().padStart(2, '0')}`;
+            document.getElementById('stat-kcal').textContent = `${kcal} ккал`;
+            document.getElementById('stat-portions').textContent = portions;
+
+            renderGear();
+            renderAdvice();
+            renderTimeline(durationMin);
+        };
+
+        const renderGear = () => {
+            const temp = state.weather[0]?.temp || 15;
+            const gear = [
+                { n: 'База', v: 'Сетка-майка' },
+                { n: 'Торс', v: temp < 15 ? 'Джерси + жилетка' : 'Джерси (кор. рукав)' },
+                { n: 'Ноги', v: temp < 12 ? 'Длинные тайтсы' : 'Биб-шорты' },
+                { n: 'Доп', v: temp < 10 ? 'Бахилы' : 'Очки + SPF' }
+            ];
+            const html = gear.map(i => `
+                <div class="flex justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <span class="font-black text-slate-400 uppercase text-[8px]">${i.n}</span>
+                    <span class="font-bold text-slate-700">${i.v}</span>
+                </div>
+            `).join('');
+            document.getElementById('gear-list').innerHTML = html;
+        };
+
+        const renderAdvice = () => {
+            const temp = state.weather[0]?.temp || 15;
+            const wind = state.weather[0]?.wind || 3;
+            const adv = [
+                temp < 12 ? "Старт в холоде! Первые 20 мин — плавный прогрев связок, каденс 90+." : "Комфортный старт. Поддерживай ровный ритм.",
+                `Набор ${state.elevation}м требует контроля. Не превышай 180 Вт на подъемах.`,
+                state.distance >= 90 ? "Длинный заезд: на 2.5 часе обязателен 🥪 плотный перекус." : "Пей по 150мл изотоника каждые 20 мин вместе с мишками.",
+                wind > 5 ? `Сильный ветер (${wind} м/с)! Осторожнее на открытых участках.` : "Ветер умеренный. Удачной тренировки!"
+            ];
+            document.getElementById('coach-advice').innerHTML = adv.map(t => `<p>• ${t}</p>`).join('');
+        };
+
+        const renderTimeline = (maxMin) => {
+            const points = [0, 20, 40, 60, 80, 100, 120, 140, 150, 160, 180, 200, 220, 240];
+            const container = document.getElementById('timeline-points');
+            container.innerHTML = '';
+            
+            points.forEach(m => {
+                if (m > maxMin + 10) return;
+                let icon = '';
+                let color = 'bg-slate-700';
+                
+                if (m === 40 && state.distance > 30) { icon = '🍌'; color = 'bg-yellow-400'; }
+                else if (m === 150 && state.distance >= 90) { icon = '🥪'; color = 'bg-orange-500'; }
+                else if (m >= 60 && m % 20 === 0) { icon = '🧸'; color = 'bg-emerald-500'; }
+                
+                const dot = document.createElement('div');
+                dot.className = 'flex flex-col items-center relative';
+                dot.innerHTML = `
+                    <div class="w-3 h-3 rounded-full border-2 border-slate-900 shadow-sm ${color}"></div>
+                    <span class="text-[8px] font-black text-slate-500 mt-2">${m}'</span>
+                    ${icon ? `<span class="absolute -top-7 text-sm animate-bounce-slow">${icon}</span>` : ''}
+                `;
+                container.appendChild(dot);
+            });
+        };
+
+        const fetchWeather = async () => {
+            const list = document.getElementById('weather-list');
+            list.innerHTML = '<div class="w-full text-center text-[10px] font-bold uppercase py-4 opacity-50">Загрузка метео...</div>';
+            
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=55.55&longitude=37.47&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&start_date=${state.date}&end_date=${state.date}&timezone=Europe/Moscow`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const startH = parseInt(state.time.split(':')[0]);
+                
+                state.weather = [];
+                list.innerHTML = '';
+                
+                for(let i = 0; i < 5; i++) {
+                    const idx = (startH + i) % 24;
+                    const h = {
+                        time: `${idx.toString().padStart(2, '0')}:00`,
+                        temp: Math.round(data.hourly.temperature_2m[idx]),
+                        wind: Math.round(data.hourly.wind_speed_10m[idx] / 3.6),
+                        deg: data.hourly.wind_direction_10m[idx]
+                    };
+                    state.weather.push(h);
+                    
+                    let tClass = 'temp-mild';
+                    if (h.temp < 10) tClass = 'temp-cold';
+                    else if (h.temp > 22) tClass = 'temp-warm';
+                    else if (h.temp > 27) tClass = 'temp-hot';
+
+                    const div = document.createElement('div');
+                    div.className = `weather-card ${tClass}`;
+                    div.innerHTML = `
+                        <div class="text-[10px] font-black opacity-50 uppercase mb-2">${h.time}</div>
+                        <div class="text-2xl font-black mb-2">${h.temp}°</div>
+                        <div class="flex items-center justify-center gap-1">
+                            <svg style="transform: rotate(${h.deg}deg)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m12 19 9 2-9-18-9 18 9-2V9"/></svg>
+                            <span class="text-[10px] font-bold">${h.wind} м/с</span>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                }
+            } catch (e) {
+                list.innerHTML = '<div class="w-full text-center text-red-500 text-[10px] font-bold uppercase py-4">Ошибка API погоды</div>';
+            }
+            updateStats();
+        };
+
+        // --- EVENTS ---
+        document.getElementById('input-date').value = state.date;
+        document.getElementById('input-date').addEventListener('change', e => { state.date = e.target.value; fetchWeather(); });
+        document.getElementById('input-time').addEventListener('change', e => { state.time = e.target.value; fetchWeather(); });
+        document.getElementById('input-distance').addEventListener('input', e => { 
+            state.distance = parseFloat(e.target.value) || 0; 
+            if(!state.isGpx) state.elevation = Math.round(state.distance * 5.8);
+            updateStats(); 
+        });
+
+        document.getElementById('input-gpx').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('gpx-label').textContent = "Анализ файла...";
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const xml = new DOMParser().parseFromString(event.target.result, "text/xml");
+                const pts = xml.getElementsByTagName("trkpt");
+                let dist = 0, elev = 0;
+                const toRad = v => v * Math.PI / 180;
+                for(let i=0; i<pts.length-1; i++){
+                    const lat1 = parseFloat(pts[i].getAttribute("lat")), lon1 = parseFloat(pts[i].getAttribute("lon"));
+                    const lat2 = parseFloat(pts[i+1].getAttribute("lat")), lon2 = parseFloat(pts[i+1].getAttribute("lon"));
+                    const a = Math.sin(toRad(lat2-lat1)/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(toRad(lon2-lon1)/2)**2;
+                    dist += 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                    const e1 = parseFloat(pts[i].getElementsByTagName("ele")[0]?.textContent || 0);
+                    const e2 = parseFloat(pts[i+1].getElementsByTagName("ele")[0]?.textContent || 0);
+                    if(e2 > e1) elev += (e2 - e1);
+                }
+                state.distance = parseFloat(dist.toFixed(1));
+                state.elevation = Math.round(elev);
+                state.isGpx = true;
+                document.getElementById('input-distance').value = state.distance;
+                document.getElementById('gpx-label').textContent = "Трек активен ✅";
+                updateStats();
+            };
+            reader.readAsText(file);
+        });
+
+        // INIT
+        fetchWeather();
+    </script>
+</body>
+</html>
