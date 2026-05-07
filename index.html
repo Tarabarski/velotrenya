@@ -20,7 +20,7 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 0.85rem;
-            padding: 0.6rem 0.85rem;
+            padding: 0.5rem 0.75rem;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
@@ -54,10 +54,9 @@
         .custom-scroll::-webkit-scrollbar { height: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        /* Цвета плашек по температуре */
-        .temp-cold { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; } /* Blue */
-        .temp-mild { background: #ecfdf5; color: #047857; border-color: #d1fae5; } /* Green */
-        .temp-warm { background: #fff7ed; color: #c2410c; border-color: #ffedd5; } /* Orange */
+        .temp-cold { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; } 
+        .temp-mild { background: #ecfdf5; color: #047857; border-color: #d1fae5; } 
+        .temp-warm { background: #fff7ed; color: #c2410c; border-color: #ffedd5; } 
 
         #map { height: 300px; width: 100%; border-radius: 1.25rem; overflow: hidden; }
         #mapCard { display: none; } 
@@ -78,6 +77,42 @@
 
         @keyframes bounce-slow { 0%, 100% { transform: translateY(-10%); } 50% { transform: none; } }
         .animate-bounce-slow { animation: bounce-slow 2.5s infinite; }
+
+        .summary-enter {
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary:hover { background-color: #1d4ed8; transform: translateY(-1px); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { color: rgba(255,255,255,0); text-shadow: .25em 0 0 rgba(255,255,255,0), .5em 0 0 rgba(255,255,255,0); }
+            40% { color: white; text-shadow: .25em 0 0 rgba(255,255,255,0), .5em 0 0 rgba(255,255,255,0); }
+            60% { text-shadow: .25em 0 0 white, .5em 0 0 rgba(255,255,255,0); }
+            80%, 100% { text-shadow: .25em 0 0 white, .5em 0 0 white; }
+        }
     </style>
 </head>
 <body class="p-3 md:p-6 text-left">
@@ -95,7 +130,7 @@
                         <h1 class="text-xl md:text-2xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
                             Велотреня <span class="text-blue-600 not-italic tracking-normal">HUB</span>
                         </h1>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 italic text-left">Autonomous Engine • v9.6</p>
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 italic text-left">Pro Assistant • v10.0</p>
                     </div>
                 </div>
 
@@ -127,20 +162,28 @@
             </div>
         </header>
 
-        <!-- DYNAMIC BRIEF BLOCK -->
-        <div id="summaryBlock" class="card border-none bg-slate-900 text-white p-5 md:p-6 shadow-xl relative overflow-hidden hidden text-left">
-            <div class="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-blue-500/10 to-transparent opacity-30"></div>
+        <!-- SUMMARY TRIGGER BUTTON -->
+        <div class="flex justify-center md:justify-start pt-2">
+            <button id="showSummaryBtn" class="btn-primary flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span id="btnText">Сводка</span>
+            </button>
+        </div>
+
+        <!-- AI BRIEF BLOCK -->
+        <div id="summaryBlock" class="card border-none bg-slate-900 text-white p-5 md:p-6 shadow-xl relative overflow-hidden hidden text-left summary-enter">
+            <div class="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-indigo-500/10 to-transparent opacity-30"></div>
             <div class="flex items-start gap-4 relative z-10">
-                <div id="summaryIconContainer" class="bg-blue-600/20 p-3 rounded-2xl border border-blue-500/30 text-blue-400 shrink-0">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <div id="summaryIconContainer" class="bg-indigo-600/20 p-3 rounded-2xl border border-indigo-500/30 text-indigo-400 shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                 </div>
                 <div class="flex-1">
                     <div class="flex items-center gap-3 mb-3">
                         <span id="summaryBadge" class="summary-badge status-ok">АНАЛИЗ</span>
-                        <h3 id="briefTitle" class="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Велосводка: Сосенское</h3>
+                        <h3 class="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em]">Аналитический прогноз</h3>
                     </div>
-                    <div id="summaryText" class="text-sm md:text-base text-slate-200 leading-relaxed font-medium whitespace-pre-line">
-                        Анализ параметров заезда...
+                    <div id="summaryText" class="text-sm md:text-base text-slate-200 leading-relaxed font-medium whitespace-pre-line italic">
+                        Подготовка...
                     </div>
                 </div>
             </div>
@@ -163,7 +206,7 @@
                 <span class="text-[9px] font-black text-slate-400 uppercase mb-1">Набор</span>
                 <p class="text-2xl font-black text-orange-600 leading-none text-center">+<span id="statElev">348</span><span class="text-sm text-slate-400 ml-1 font-bold">м</span></p>
             </div>
-            <div class="card p-4 flex flex-col items-center justify-center border-none relative overflow-hidden">
+            <div class="card p-4 flex flex-col items-center justify-center border-none relative overflow-hidden text-center">
                 <div class="absolute bottom-0 left-0 w-full h-1 bg-slate-800"></div>
                 <span class="text-[9px] font-black text-slate-400 uppercase mb-1 italic">Мощность</span>
                 <p class="text-2xl font-black text-slate-900 leading-none text-center"><span id="statPower">--</span><span class="text-sm text-slate-400 ml-1 font-bold">Вт</span></p>
@@ -176,7 +219,7 @@
         </section>
 
         <!-- WEATHER & GEAR -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-left">
             <div class="card border-none shadow-md overflow-hidden text-left">
                 <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-3 text-slate-900 mb-6">
                     <svg class="text-blue-600" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -188,28 +231,27 @@
             <div class="card border-none shadow-md text-left">
                 <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-3 text-slate-900 mb-6">
                     <svg class="text-blue-600" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Выбор экипировки
+                    Экипировка
                 </h2>
                 <div id="gearList" class="flex flex-col gap-3"></div>
             </div>
         </div>
 
-        <!-- ENERGY & FEEDING -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="card border-none shadow-md border-t-4 border-t-orange-600 relative overflow-hidden flex items-center justify-between">
-                <div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+            <div class="card border-none shadow-md border-t-4 border-t-orange-600 relative overflow-hidden flex items-center justify-between text-center">
+                <div class="text-left text-center">
                     <h3 class="text-[10px] font-black uppercase text-slate-400 mb-1">Энергия</h3>
-                    <p class="text-4xl font-black text-orange-600 leading-none" id="statKcal">--</p>
-                    <p class="text-[9px] text-slate-400 mt-2 font-bold uppercase italic text-left">Всего KCAL (Вт + Грав.)</p>
+                    <p class="text-4xl font-black text-orange-600 leading-none text-center" id="statKcal">--</p>
+                    <p class="text-[9px] text-slate-400 mt-2 font-bold uppercase italic text-left text-center">Всего KCAL (Вт + Грав.)</p>
                 </div>
                 <svg class="text-orange-600/5 shrink-0" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 L3 14 L12 14 L11 22 L21 10 L12 10 Z"/></svg>
             </div>
-            <div class="card border-none shadow-md border-t-4 border-t-blue-600 relative overflow-hidden flex items-center justify-between">
-                <div>
-                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-1 text-left">Питание заезд 🧸</h3>
+            <div class="card border-none shadow-md border-t-4 border-t-blue-600 relative overflow-hidden flex items-center justify-between text-center">
+                <div class="text-left text-center">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-1 text-left text-center">Питание заезд 🧸</h3>
                     <div class="flex items-center gap-4 mt-1 text-center justify-center">
                         <div>
-                            <p class="text-4xl font-black text-blue-600 leading-none" id="statBears">--</p>
+                            <p class="text-4xl font-black text-blue-600 leading-none text-center" id="statBears">--</p>
                             <p class="text-[8px] font-black text-slate-500 uppercase mt-1">Мишки (порц.)</p>
                         </div>
                         <div id="statLunches" class="hidden">
@@ -222,14 +264,16 @@
             </div>
         </div>
 
-        <footer class="text-center py-10 opacity-30 border-t border-slate-200 mt-6 italic text-slate-400 text-[10px] font-black uppercase tracking-[0.5em]">
-            Sosenkoye HUB &bull; Expert Analytics &bull; 2026
+        <footer class="text-center py-10 opacity-30 border-t border-slate-200 mt-6 italic text-slate-400 text-[10px] font-black uppercase tracking-[0.5em] text-center">
+            Sosenkoye HUB &bull; Professional Cycling Analytics &bull; 2026
         </footer>
     </div>
 
     <!-- OpenLayers JS -->
     <script src="https://cdn.jsdelivr.net/npm/ol@v9.1.0/dist/ol.js"></script>
     <script>
+        const apiKey = ""; // API ключ предоставляется средой
+        
         const state = {
             date: new Date().toISOString().split('T')[0],
             time: "10:00",
@@ -239,7 +283,9 @@
             weather: [],
             isGpx: false,
             map: null,
-            trackLayer: null
+            trackLayer: null,
+            summaryVisible: false,
+            isAiLoading: false
         };
 
         const formatDuration = (totalMins) => {
@@ -256,47 +302,67 @@
             return `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>`;
         };
 
-        const updateSummary = (weatherData, dist, date, time) => {
-            if (!weatherData || weatherData.length === 0) return;
-            const current = weatherData[0];
-            const last = weatherData[weatherData.length - 1];
-            const badge = document.getElementById('summaryBadge');
+        const fetchAiBrief = async (prompt) => {
+            const sys = "Ты — профессиональный велопомощник. Будь предельно кратким и конкретным. Используй буллиты. Расскажи: 1) Окно погоды, 2) Экипировка, 3) Питание. Без приветствий и упоминания имен. Локация Сосенское.";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const call = async (retries = 0) => {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            systemInstruction: { parts: [{ text: sys }] }
+                        })
+                    });
+                    if (!res.ok) throw new Error();
+                    const data = await res.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (e) {
+                    if (retries < 5) {
+                        await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
+                        return call(retries + 1);
+                    }
+                    throw e;
+                }
+            };
+            return await call();
+        };
+
+        const updateSummary = async () => {
+            if (!state.weather.length) return;
+            const block = document.getElementById('summaryBlock');
             const text = document.getElementById('summaryText');
-            document.getElementById('summaryBlock').classList.remove('hidden');
+            const btn = document.getElementById('showSummaryBtn');
+            const badge = document.getElementById('summaryBadge');
 
-            let status = "ok";
-            let badgeText = "ИДЕАЛЬНО";
-            let brief = "";
+            state.isAiLoading = true;
+            btn.disabled = true;
+            document.getElementById('btnText').innerText = "Анализирую...";
+            text.innerHTML = '<span class="loading-dots">Изучение прогноза</span>';
 
-            if (current.code >= 51) {
-                brief = "🚲 Велосводка: Сосенское\n• На улице осадки. Тренировка небезопасна, риск простуды и скользкого асфальта. Лучше остаться дома.";
-                status = "danger"; badgeText = "ОТМЕНА";
-            } else {
-                const durationH = Math.ceil(dist / 28.5);
-                const finishTime = (parseInt(time.split(':')[0]) + durationH) % 24;
-                const finishStr = `${finishTime.toString().padStart(2, '0')}:00`;
-                const bottles = dist > 60 ? 2 : 1;
-                const bears = Math.max(0, dist > 0 ? (Math.floor((durationH * 60 - 60) / 20) + 1) : 0);
+            const weatherStr = state.weather.map(h => `${h.time}: ${h.temp}C`).join(', ');
+            const prompt = `Заезд: ${state.date}, старт ${state.time}, ${state.distance}км, вес ${state.weight}кг, набор ${state.elevation}м. Погода: ${weatherStr}`;
+
+            try {
+                const aiText = await fetchAiBrief(prompt);
+                text.innerText = aiText;
+            } catch (e) {
+                text.innerText = "Ошибка API. Проверьте условия по списку ниже.";
+            } finally {
+                state.isAiLoading = false;
+                btn.disabled = false;
+                document.getElementById('btnText').innerText = "Сводка";
                 
-                let tempInfo = current.temp === last.temp ? `стабильно +${current.temp}°C` : `на старте +${current.temp}°C, к финишу +${last.temp}°C`;
-                let gearMsg = current.temp < 15 ? "Холодно. Защищай колени и используй слои." : current.temp > 23 ? "Жарко. Минимум слоев и SPF." : "Комфортно. Стандартный комплект.";
-
-                brief = `Вот краткая сводка для тренировки в ${time}:
-🚲 Велосводка: Сосенское
-• Погода (${time}–${finishStr}): ${tempInfo}. Без осадков, ветер ${current.wind} м/с.
-• Экипировка: ${gearMsg}
-• Питание: ${bottles} бачка (изотоник/вода) и ${bears} порций углеводов (мишки или гели).
-Удачного заезда!`;
-                
-                // Динамика статусов
-                if (current.temp < 15) { status = "cold"; badgeText = "ХОЛОДНО"; }
-                else if (current.temp > 23) { status = "warn"; badgeText = "ЖАРКО"; }
-                if (current.wind > 7) { status = "warn"; badgeText = "ВНИМАНИЕ"; }
+                const current = state.weather[0];
+                let s = "ok", b = "ИДЕАЛЬНО";
+                if (current.temp < 15) { s="cold"; b="ХОЛОДНО"; }
+                else if (current.temp > 23) { s="warn"; b="ЖАРКО"; }
+                if (current.wind > 7) { s="warn"; b="ВЕТЕР"; }
+                badge.className = `summary-badge status-${s}`;
+                badge.innerText = b;
             }
-
-            badge.className = `summary-badge status-${status}`;
-            badge.innerText = badgeText;
-            text.innerText = brief;
         };
 
         const updateData = () => {
@@ -305,13 +371,13 @@
             const durationH = state.distance / speedAvg;
             const wTotal = state.weight + 9;
             const power = Math.round(0.5 * 1.225 * Math.pow(speedAvg/3.6, 3) * 0.35 + 9.81 * wTotal * 0.005 * speedAvg/3.6);
-            const totalKcal = Math.round((power * durationH * 3.6) + (wTotal * 9.81 * state.elevation) / (4184 * 0.23));
+            const kcal = Math.round((power * durationH * 3.6) + (wTotal * 9.81 * state.elevation) / (4184 * 0.23));
             
             document.getElementById('statDist').innerText = state.distance;
             document.getElementById('statElev').innerText = state.elevation;
             document.getElementById('statTime').innerText = formatDuration(durationH * 60);
             document.getElementById('statPower').innerText = power;
-            document.getElementById('statKcal').innerText = totalKcal;
+            document.getElementById('statKcal').innerText = kcal;
             document.getElementById('statBears').innerText = Math.max(0, Math.floor((durationH * 60 - 60) / 20) + 1);
             
             const lunchEl = document.getElementById('statLunches');
@@ -319,36 +385,15 @@
 
             renderWeather();
             renderGear();
-            updateSummary(state.weather, state.distance, state.date, state.time);
         };
 
         const renderWeather = () => {
             const container = document.getElementById('weatherList');
-            if (state.weather.length === 0) return;
+            if (!state.weather.length) return;
             container.innerHTML = state.weather.map(h => {
-                // Раскраска плашек
                 let cls = h.temp < 15 ? 'temp-cold' : h.temp > 23 ? 'temp-warm' : 'temp-mild';
-                const arrowRotation = (h.deg + 180) % 360;
-                return `
-                <div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${cls}">
-                    <div class="flex items-center gap-3 w-1/4">
-                        <div class="flex flex-col items-center">
-                            <span class="font-mono text-[10px] font-black opacity-60 w-10 text-left mb-0.5">${h.time}</span>
-                            <div class="opacity-100 transform scale-90 text-left">${getWeatherIcon(h.code)}</div>
-                        </div>
-                    </div>
-                    <div class="text-center w-1/3">
-                        <span class="text-4xl font-black block leading-none tracking-tighter">${h.temp}°</span>
-                        <span class="text-[8px] uppercase font-black opacity-40 mt-1 block text-center">Градусов</span>
-                    </div>
-                    <div class="flex items-center justify-end gap-3 w-1/3 text-right">
-                       <div class="text-right">
-                          <span class="text-4xl font-black block leading-none tracking-tighter text-right text-right">${h.wind}</span>
-                          <span class="text-[8px] uppercase font-black opacity-40 mt-1 block font-bold text-right text-right">м/с Ветер</span>
-                       </div>
-                       <svg style="transform: rotate(${arrowRotation}deg)" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="transition-transform"><path d="m12 19 9 2-9-18-9 18 9-2V9"/></svg>
-                    </div>
-                </div>`;
+                const rot = (h.deg + 180) % 360;
+                return `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${cls}"><div class="flex items-center gap-3 w-1/4"><div class="flex flex-col items-center"><span class="font-mono text-[10px] font-black opacity-60 w-10 text-left mb-0.5">${h.time}</span><div class="opacity-100 scale-90">${getWeatherIcon(h.code)}</div></div></div><div class="text-center w-1/3"><span class="text-4xl font-black block leading-none tracking-tighter">${h.temp}°</span><span class="text-[8px] uppercase font-black opacity-40 mt-1 block">Градусов</span></div><div class="flex items-center justify-end gap-3 w-1/3 text-right"><div class="text-right text-right"><span class="text-4xl font-black block leading-none tracking-tighter text-right text-right">${h.wind}</span><span class="text-[8px] uppercase font-black opacity-40 mt-1 block font-bold text-right text-right">м/с Ветер</span></div><svg style="transform: rotate(${rot}deg)" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="transition-transform"><path d="m12 19 9 2-9-18-9 18 9-2V9"/></svg></div></div>`;
             }).join('');
         };
 
@@ -357,20 +402,9 @@
             const items = [];
             if (t < 10) items.push({ n: 'База', v: 'Термомайка (меринос)' }); else if (t < 18) items.push({ n: 'База', v: 'Сетчатая термомайка' }); else items.push({ n: 'База', v: 'Ультралегкая сетка' });
             if (t < 13) items.push({ n: 'Верх', v: 'Джерси LS + жилет' }); else if (t < 17) items.push({ n: 'Верх', v: 'Джерси + рукава' }); else items.push({ n: 'Верх', v: 'Летнее джерси' });
-            if (t < 12) items.push({ n: 'Низ', v: 'Зимние тайтсы' }); else if (t < 16) items.push({ n: 'Низ', v: 'Биб-шорты + наколенники' }); else items.push({ n: 'Низ', v: 'Биб-шорты (короткие)' });
+            if (t < 12) items.push({ n: 'Низ', v: 'Зимние тайтсы' }); else if (t < 16) items.push({ n: 'Низ', v: 'Биб-шорты + наколенники' }); else items.push({ n: 'Низ', v: 'Биб-шорты' });
             items.push({ n: 'Доп', v: t < 15 ? 'Toe-covers + перчатки' : 'Очки + SPF 30+' });
-            document.getElementById('gearList').innerHTML = items.map(i => `
-                <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 text-left">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-blue-100 rounded-xl text-blue-600 flex items-center justify-center text-center">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                        </div>
-                        <div class="text-left text-left">
-                            <p class="text-slate-400 uppercase text-[7px] font-black mb-1 leading-none tracking-widest text-left">${i.n}</p>
-                            <p class="text-xs font-bold text-slate-800 leading-tight text-left">${i.v}</p>
-                        </div>
-                    </div>
-                </div>`).join('');
+            document.getElementById('gearList').innerHTML = items.map(i => `<div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 text-left"><div class="flex items-center gap-3"><div class="p-2 bg-blue-100 rounded-xl text-blue-600 flex items-center justify-center text-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div><div class="text-left text-left text-left"><p class="text-slate-400 uppercase text-[7px] font-black mb-1 leading-none tracking-widest text-left text-left">${i.n}</p><p class="text-xs font-bold text-slate-800 leading-tight text-left text-left text-left">${i.v}</p></div></div></div>`).join('');
         };
 
         const fetchWeather = async () => {
@@ -407,11 +441,23 @@
             }
         };
 
+        // Events
         document.getElementById('dateInput').value = state.date;
         document.getElementById('dateInput').addEventListener('change', (e) => { state.date = e.target.value; fetchWeather(); });
         document.getElementById('timeInput').addEventListener('change', (e) => { state.time = e.target.value; fetchWeather(); });
         document.getElementById('distanceInput').addEventListener('input', (e) => { state.distance = parseFloat(e.target.value) || 0; updateData(); });
         document.getElementById('weightInput').addEventListener('input', (e) => { state.weight = parseFloat(e.target.value) || 76; updateData(); });
+
+        document.getElementById('showSummaryBtn').addEventListener('click', () => {
+            const block = document.getElementById('summaryBlock');
+            state.summaryVisible = !state.summaryVisible;
+            if (state.summaryVisible) {
+                block.classList.remove('hidden');
+                updateSummary();
+            } else {
+                block.classList.add('hidden');
+            }
+        });
 
         document.getElementById('gpxInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
